@@ -54,6 +54,11 @@ app.use(express.json());
 console.log('Mounting auth routes at /api/auth');
 app.use('/api/auth', authRoutes);
 
+// Basic route for testing
+app.get('/', (req, res) => {
+  res.json({ message: 'GameChat Backend API' });
+});
+
 // Add a catch-all route for debugging
 app.use('*', (req, res) => {
   console.log('404 - Route not found:', req.originalUrl);
@@ -113,11 +118,6 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('Client disconnected');
   });
-});
-
-// Basic route for testing
-app.get('/', (req, res) => {
-  res.json({ message: 'GameChat Backend API' });
 });
 
 const PORT = process.env.PORT || 5000;
