@@ -4,24 +4,44 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const http = require('http');
 const socketIo = require('socket.io');
+const authRoutes = require('./routes/auth');
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: "http://localhost:5173", // Your frontend URL
     methods: ["GET", "POST"]
   }
 });
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: "http://localhost:5173", // Your frontend URL
+  credentials: true
+}));
 app.use(express.json());
 
+// Routes
+app.use('/api/auth', authRoutes);
+
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/gamechat')
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err));
+const MONGODB_URI = 'mongodb+srv://williefbeukes:dAZlNQUZCBcKBi58@cluster0.ra02y7n.mongodb.net/gamechat';
+
+mongoose.connect(MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => {
+  console.log('Connected to MongoDB Atlas');
+  // Create indexes for better performance
+  mongoose.connection.db.collection('users').createIndex({ email: 1 }, { unique: true });
+  mongoose.connection.db.collection('users').createIndex({ username: 1 }, { unique: true });
+})
+.catch(err => {
+  console.error('MongoDB connection error:', err);
+  process.exit(1); // Exit if cannot connect to database
+});
 
 // Socket.IO Connection
 io.on('connection', (socket) => {

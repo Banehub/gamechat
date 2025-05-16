@@ -67,8 +67,12 @@
     padding: 10px;
     border-radius: 10px;
     border: none;
-    background-color: lightcyan;
+    background-color: #1a1a1a;
     color: #fff;
+}
+
+.modal_form input:focus {
+    outline: 2px solid #a259ff;
 }
 
 .modal_form button {
@@ -76,13 +80,28 @@
     padding: 10px;
     border-radius: 10px;
     border: none;
-    background-color: lightcyan;
-    color: black;
+    background-color: #a259ff;
+    color: white;
     font-weight: bold;
     cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.modal_form button:hover {
+    background-color: #8a4fff;
 }
 
 .modal_form_p {
     color: #fff;
     font-size: 12px;
+}
+
+.error {
+    color: #ff4d4d;
+    background-color: rgba(255, 77, 77, 0.1);
+    padding: 8px 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    text-align: center;
+    width: 80%;
 }
