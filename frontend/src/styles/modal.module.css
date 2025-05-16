@@ -1,0 +1,88 @@
+.modal {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 400px;
+    height: 400px;
+    background-color: #2e2e2e;
+    border-radius: 10px;
+    z-index: 1;
+    overflow: visible;
+}
+
+.modal::before {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border-radius: 14px;
+    padding: 0;
+    background: none;
+    pointer-events: none;
+    z-index: 2;
+    box-shadow: 0 0 16px 4px #a259ff, 0 0 32px 8px #e040fb;
+    border: 4px solid transparent;
+    background-image: linear-gradient(270deg, #a259ff, #6a00ff, #a259ff, #e040fb, #a259ff);
+    background-size: 400% 400%;
+    background-clip: border-box;
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box, 
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: border-glow 3s linear infinite;
+}
+
+@keyframes border-glow {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+.modal_form {
+    position: absolute;
+    top: 0%;
+    left: 0%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+    /* background-color: yellow; */
+}
+
+.modal_form input {
+    width: 80%;
+    padding: 10px;
+    border-radius: 10px;
+    border: none;
+    background-color: lightcyan;
+    color: #fff;
+}
+
+.modal_form button {
+    width: 85%;
+    padding: 10px;
+    border-radius: 10px;
+    border: none;
+    background-color: lightcyan;
+    color: black;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.modal_form_p {
+    color: #fff;
+    font-size: 12px;
+}
