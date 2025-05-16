@@ -11,18 +11,36 @@ console.log('Auth routes initialized');
 // Register endpoint
 router.post('/register', async (req, res) => {
   try {
-    console.log('Register request received:', req.body);
+    console.log('Register request received:', {
+      body: req.body,
+      headers: req.headers,
+      url: req.url,
+      method: req.method
+    });
+
     const { username, email, password } = req.body;
 
     if (!username || !email || !password) {
-      console.log('Missing required fields:', { username, email, password: password ? 'provided' : 'missing' });
+      console.log('Missing required fields:', { 
+        username: username || 'missing', 
+        email: email || 'missing', 
+        password: password ? 'provided' : 'missing' 
+      });
       return res.status(400).json({ message: 'All fields are required' });
     }
 
     // Check if user already exists
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
     if (existingUser) {
-      console.log('User already exists:', { email, username });
+      console.log('User already exists:', { 
+        email, 
+        username,
+        existingUser: {
+          id: existingUser._id,
+          email: existingUser.email,
+          username: existingUser.username
+        }
+      });
       return res.status(400).json({ message: 'User already exists' });
     }
 
@@ -34,7 +52,11 @@ router.post('/register', async (req, res) => {
     });
 
     await user.save();
-    console.log('New user created:', { username, email });
+    console.log('New user created:', { 
+      id: user._id,
+      username: user.username, 
+      email: user.email 
+    });
 
     // Create token
     const token = jwt.sign(

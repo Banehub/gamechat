@@ -24,15 +24,28 @@ export default function RegisterModal() {
         e.preventDefault();
         setError('');
 
+        console.log('Registration form submitted:', {
+            username: formData.username,
+            email: formData.email,
+            passwordLength: formData.password.length
+        });
+
         if (formData.password !== formData.confirmPassword) {
+            console.log('Password mismatch:', {
+                password: formData.password.length,
+                confirmPassword: formData.confirmPassword.length
+            });
             setError('Passwords do not match');
             return;
         }
 
         try {
+            console.log('Attempting to register user...');
             await register(formData.username, formData.email, formData.password);
+            console.log('Registration successful, navigating to dashboard');
             navigate('/dashboard');
         } catch (err) {
+            console.error('Registration error:', err);
             setError(err.message);
         }
     };
