@@ -10,7 +10,7 @@ const app = express();
 const server = http.createServer(app);
 
 // Get frontend URL from environment variable or use default
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://gamechat-3-front-end.onrender.com";
 
 console.log('Frontend URL:', FRONTEND_URL); // Debug log
 
@@ -27,7 +27,7 @@ app.use(cors({
   origin: [FRONTEND_URL, "http://localhost:5173"],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
 }));
 
 // Add error handling middleware

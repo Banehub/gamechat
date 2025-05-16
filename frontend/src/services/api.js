@@ -1,6 +1,9 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// Use the environment variable or fallback to the production URL
+const API_URL = import.meta.env.VITE_API_URL || 'https://gamechat-3-backend.onrender.com/api';
 
-console.log('API URL:', API_URL); // Debug log
+// Debug logging
+console.log('Current API URL:', API_URL);
+console.log('Environment variables:', import.meta.env);
 
 const handleResponse = async (response) => {
   try {
@@ -17,11 +20,14 @@ const handleResponse = async (response) => {
 
 export const login = async (username, password) => {
   try {
-    console.log('Attempting login to:', `${API_URL}/auth/login`);
-    const response = await fetch(`${API_URL}/auth/login`, {
+    const url = `${API_URL}/auth/login`;
+    console.log('Attempting login to:', url);
+    
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json'
       },
       body: JSON.stringify({ username, password }),
       credentials: 'include',
