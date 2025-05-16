@@ -1,4 +1,4 @@
-import styles from "../styles/sideMenu.module.css";
+import styles from "../styles/sidemenu.module.css";
 
 export default function SideMenu() {
     // Dummy user data

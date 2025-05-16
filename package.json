@@ -4,8 +4,7 @@
   "description": "Discord-like chat application",
   "scripts": {
     "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm run dev\"",
-    "install": "npm install && cd backend && npm install && cd ../frontend && npm install",
-    "start": "serve -s dist"
+"install:all": "npm install && cd backend && npm install && cd ../frontend && npm install"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
