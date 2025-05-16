@@ -1,5 +1,5 @@
 // Use the environment variable or fallback to the production URL
-const API_URL = import.meta.env.VITE_API_URL || 'https://gamechat-3-backend.onrender.com:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://gamechat-3-backend.onrender.com/api';
 
 // Debug logging
 console.log('Current API URL:', API_URL);
@@ -77,6 +77,16 @@ export const register = async (username, email, password) => {
       headers: Object.fromEntries(response.headers.entries()),
       url: response.url
     });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Registration failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorData
+      });
+      throw new Error(errorData.message || `Registration failed: ${response.status} ${response.statusText}`);
+    }
     
     const data = await handleResponse(response);
     

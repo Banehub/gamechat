@@ -64,7 +64,16 @@ app.use(express.json());
 
 // Routes
 console.log('Mounting auth routes at /api/auth');
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', (req, res, next) => {
+  console.log('Auth route accessed:', {
+    method: req.method,
+    url: req.url,
+    path: req.path,
+    originalUrl: req.originalUrl,
+    baseUrl: req.baseUrl
+  });
+  next();
+}, authRoutes);
 
 // Basic route for testing
 app.get('/', (req, res) => {

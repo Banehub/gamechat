@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import styles from "../styles/modal.module.css";
 import { login } from '../services/api';
 
@@ -52,7 +52,7 @@ export default function Modal() {
                         required
                     />
                     <button type="submit">Login</button>
-                    <p className={styles.modal_form_p}>Don't have an account? <a href="/register">Sign up</a></p>
+                    <p className={styles.modal_form_p}>Don't have an account? <Link to="/register">Sign up</Link></p>
                 </form>
             </div>
         </div>
