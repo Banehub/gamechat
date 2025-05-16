@@ -30,6 +30,12 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
 }));
 
+// Add request logging middleware
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url}`);
+  next();
+});
+
 // Add error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
@@ -39,6 +45,7 @@ app.use((err, req, res, next) => {
 app.use(express.json());
 
 // Routes
+console.log('Mounting auth routes at /api/auth');
 app.use('/api/auth', authRoutes);
 
 // MongoDB Connection

@@ -6,11 +6,18 @@ const jwt = require('jsonwebtoken');
 // Get JWT secret from environment or use a default (not recommended for production)
 const JWT_SECRET = process.env.JWT_SECRET || '654965189491';
 
+console.log('Auth routes initialized');
+
 // Register endpoint
 router.post('/register', async (req, res) => {
   try {
     console.log('Register request received:', req.body);
     const { username, email, password } = req.body;
+
+    if (!username || !email || !password) {
+      console.log('Missing required fields:', { username, email, password: password ? 'provided' : 'missing' });
+      return res.status(400).json({ message: 'All fields are required' });
+    }
 
     // Check if user already exists
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
