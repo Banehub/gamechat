@@ -30,7 +30,12 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 
 // MongoDB Connection
-const MONGODB_URI = 'mongodb+srv://williefbeukes:dAZlNQUZCBcKBi58@cluster0.ra02y7n.mongodb.net/gamechat';
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+  console.error('MONGODB_URI is not defined in environment variables');
+  process.exit(1);
+}
 
 mongoose.connect(MONGODB_URI, {
   useNewUrlParser: true,

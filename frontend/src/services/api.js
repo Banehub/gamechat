@@ -1,5 +1,13 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+const handleResponse = async (response) => {
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.message || 'An error occurred');
+  }
+  return data;
+};
+
 export const login = async (username, password) => {
   try {
     const response = await fetch(`${API_URL}/auth/login`, {
@@ -11,10 +19,7 @@ export const login = async (username, password) => {
       credentials: 'include'
     });
     
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.message);
-    }
+    const data = await handleResponse(response);
     
     // Store token in localStorage
     localStorage.setItem('token', data.token);
@@ -22,6 +27,7 @@ export const login = async (username, password) => {
     
     return data;
   } catch (error) {
+    console.error('Login error:', error);
     throw error;
   }
 };
@@ -37,10 +43,7 @@ export const register = async (username, email, password) => {
       credentials: 'include'
     });
     
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.message);
-    }
+    const data = await handleResponse(response);
     
     // Store token in localStorage
     localStorage.setItem('token', data.token);
@@ -48,6 +51,7 @@ export const register = async (username, email, password) => {
     
     return data;
   } catch (error) {
+    console.error('Registration error:', error);
     throw error;
   }
 };
