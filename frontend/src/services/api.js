@@ -51,6 +51,7 @@ export const register = async (username, email, password) => {
   try {
     const url = `${API_URL}/auth/register`;
     console.log('Attempting registration to:', url);
+    console.log('Registration data:', { username, email, password: '***' });
     
     const response = await fetch(url, {
       method: 'POST',
@@ -62,6 +63,9 @@ export const register = async (username, email, password) => {
       credentials: 'include',
       mode: 'cors'
     });
+    
+    console.log('Registration response status:', response.status);
+    console.log('Registration response headers:', Object.fromEntries(response.headers.entries()));
     
     const data = await handleResponse(response);
     

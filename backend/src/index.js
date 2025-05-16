@@ -32,7 +32,12 @@ app.use(cors({
 
 // Add request logging middleware
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.url}`);
+  console.log('Incoming request:', {
+    method: req.method,
+    url: req.url,
+    headers: req.headers,
+    body: req.body
+  });
   next();
 });
 
@@ -47,6 +52,16 @@ app.use(express.json());
 // Routes
 console.log('Mounting auth routes at /api/auth');
 app.use('/api/auth', authRoutes);
+
+// Add a catch-all route for debugging
+app.use('*', (req, res) => {
+  console.log('404 - Route not found:', req.originalUrl);
+  res.status(404).json({ 
+    message: 'Route not found',
+    requestedUrl: req.originalUrl,
+    availableRoutes: ['/api/auth/register', '/api/auth/login']
+  });
+});
 
 // MongoDB Connection
 const MONGODB_URI = process.env.MONGODB_URI;
