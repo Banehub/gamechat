@@ -36,8 +36,13 @@ app.use((req, res, next) => {
   console.log('Incoming request:', {
     method: req.method,
     url: req.url,
+    path: req.path,
+    originalUrl: req.originalUrl,
+    baseUrl: req.baseUrl,
     headers: req.headers,
-    body: req.body
+    body: req.body,
+    query: req.query,
+    params: req.params
   });
   next();
 });
@@ -45,6 +50,13 @@ app.use((req, res, next) => {
 // Add error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
+  console.error('Request details:', {
+    method: req.method,
+    url: req.url,
+    path: req.path,
+    originalUrl: req.originalUrl,
+    baseUrl: req.baseUrl
+  });
   res.status(500).json({ message: 'Internal server error', error: err.message });
 });
 
@@ -61,7 +73,14 @@ app.get('/', (req, res) => {
 
 // Add a catch-all route for debugging
 app.use('*', (req, res) => {
-  console.log('404 - Route not found:', req.originalUrl);
+  console.log('404 - Route not found:', {
+    url: req.url,
+    path: req.path,
+    originalUrl: req.originalUrl,
+    baseUrl: req.baseUrl,
+    method: req.method,
+    headers: req.headers
+  });
   res.status(404).json({ 
     message: 'Route not found',
     requestedUrl: req.originalUrl,
