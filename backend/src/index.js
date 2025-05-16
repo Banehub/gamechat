@@ -8,16 +8,20 @@ const authRoutes = require('./routes/auth');
 
 const app = express();
 const server = http.createServer(app);
+
+// Get frontend URL from environment variable or use default
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+
 const io = socketIo(server, {
   cors: {
-    origin: "http://localhost:5173", // Your frontend URL
+    origin: FRONTEND_URL,
     methods: ["GET", "POST"]
   }
 });
 
 // Middleware
 app.use(cors({
-  origin: "http://localhost:5173", // Your frontend URL
+  origin: FRONTEND_URL,
   credentials: true
 }));
 app.use(express.json());
