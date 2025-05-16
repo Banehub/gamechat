@@ -1,5 +1,5 @@
 // Use the environment variable or fallback to the production URL
-const API_URL = import.meta.env.VITE_API_URL || 'https://gamechat-3-backend.onrender.com/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://gamechat-3-backend.onrender.com:10000/api';
 
 // Debug logging
 console.log('Current API URL:', API_URL);
