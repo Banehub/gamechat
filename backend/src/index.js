@@ -46,8 +46,12 @@ const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
   console.error('MONGODB_URI is not defined in environment variables');
+  console.error('Please set MONGODB_URI in your environment variables');
+  console.error('Current environment variables:', process.env);
   process.exit(1);
 }
+
+console.log('Attempting to connect to MongoDB...');
 
 mongoose.connect(MONGODB_URI, {
   useNewUrlParser: true,
@@ -61,6 +65,7 @@ mongoose.connect(MONGODB_URI, {
 })
 .catch(err => {
   console.error('MongoDB connection error:', err);
+  console.error('MongoDB URI:', MONGODB_URI.replace(/:[^:]*@/, ':****@')); // Hide password in logs
   process.exit(1); // Exit if cannot connect to database
 });
 

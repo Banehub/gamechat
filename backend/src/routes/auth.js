@@ -3,14 +3,19 @@ const router = express.Router();
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
+// Get JWT secret from environment or use a default (not recommended for production)
+const JWT_SECRET = process.env.JWT_SECRET || '654965189491';
+
 // Register endpoint
 router.post('/register', async (req, res) => {
   try {
+    console.log('Register request received:', req.body);
     const { username, email, password } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
     if (existingUser) {
+      console.log('User already exists:', { email, username });
       return res.status(400).json({ message: 'User already exists' });
     }
 
@@ -22,11 +27,12 @@ router.post('/register', async (req, res) => {
     });
 
     await user.save();
+    console.log('New user created:', { username, email });
 
     // Create token
     const token = jwt.sign(
       { userId: user._id },
-      process.env.JWT_SECRET || '654965189491',
+      JWT_SECRET,
       { expiresIn: '24h' }
     );
 
@@ -40,6 +46,7 @@ router.post('/register', async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Error in register endpoint:', error);
     res.status(500).json({ message: 'Error creating user', error: error.message });
   }
 });
@@ -64,7 +71,7 @@ router.post('/login', async (req, res) => {
     // Create token
     const token = jwt.sign(
       { userId: user._id },
-      process.env.JWT_SECRET || 'your-secret-key',
+      JWT_SECRET,
       { expiresIn: '24h' }
     );
 
@@ -78,6 +85,7 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Error in login endpoint:', error);
     res.status(500).json({ message: 'Error logging in', error: error.message });
   }
 });

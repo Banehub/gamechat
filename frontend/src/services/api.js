@@ -49,11 +49,14 @@ export const login = async (username, password) => {
 
 export const register = async (username, email, password) => {
   try {
-    console.log('Attempting registration to:', `${API_URL}/auth/register`);
-    const response = await fetch(`${API_URL}/auth/register`, {
+    const url = `${API_URL}/auth/register`;
+    console.log('Attempting registration to:', url);
+    
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json'
       },
       body: JSON.stringify({ username, email, password }),
       credentials: 'include',
