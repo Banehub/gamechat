@@ -2,10 +2,14 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from "../styles/sidemenu.module.css";
 import { getOnlineUsers, logout } from '../services/api';
+import Popup from './Popup';
 
 export default function SideMenu({ onSelectUser }) {
     const [onlineUsers, setOnlineUsers] = useState([]);
     const [error, setError] = useState('');
+    const [showPopup, setShowPopup] = useState(false);
+    const [popupMessage, setPopupMessage] = useState('');
+    const [popupType, setPopupType] = useState('');
     const [currentUser] = useState(() => {
         // Initialize current user from localStorage only once
         const user = JSON.parse(localStorage.getItem('user'));
@@ -40,9 +44,18 @@ export default function SideMenu({ onSelectUser }) {
     const handleLogout = async () => {
         try {
             await logout();
-            navigate('/');
+            setPopupMessage('Logout successful!');
+            setPopupType('success');
+            setShowPopup(true);
+            // Wait for popup to show before navigating
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1000);
         } catch (err) {
             console.error('Error during logout:', err);
+            setPopupMessage('Error during logout');
+            setPopupType('error');
+            setShowPopup(true);
         }
     };
 
@@ -52,6 +65,13 @@ export default function SideMenu({ onSelectUser }) {
 
     return (
         <div className={styles.sideMenu}>
+            {showPopup && (
+                <Popup
+                    message={popupMessage}
+                    type={popupType}
+                    onClose={() => setShowPopup(false)}
+                />
+            )}
             <div className={styles.userList}>
                 <h2 className={styles.title}>Online Users</h2>
                 {error && <p className={styles.error}>{error}</p>}

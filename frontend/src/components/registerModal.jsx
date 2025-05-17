@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import styles from "../styles/modal.module.css";
 import { register } from '../services/api';
+import Popup from './Popup';
 
 export default function RegisterModal() {
     const [formData, setFormData] = useState({
@@ -11,6 +12,9 @@ export default function RegisterModal() {
         confirmPassword: ''
     });
     const [error, setError] = useState('');
+    const [showPopup, setShowPopup] = useState(false);
+    const [popupMessage, setPopupMessage] = useState('');
+    const [popupType, setPopupType] = useState('');
     const navigate = useNavigate();
 
     const handleChange = (e) => {
@@ -24,34 +28,40 @@ export default function RegisterModal() {
         e.preventDefault();
         setError('');
 
-        console.log('Registration form submitted:', {
-            username: formData.username,
-            email: formData.email,
-            passwordLength: formData.password.length
-        });
-
         if (formData.password !== formData.confirmPassword) {
-            console.log('Password mismatch:', {
-                password: formData.password.length,
-                confirmPassword: formData.confirmPassword.length
-            });
             setError('Passwords do not match');
+            setPopupMessage('Passwords do not match');
+            setPopupType('error');
+            setShowPopup(true);
             return;
         }
 
         try {
-            console.log('Attempting to register user...');
             await register(formData.username, formData.email, formData.password);
-            console.log('Registration successful, navigating to dashboard');
-            navigate('/dashboard');
+            setPopupMessage('Registration successful! Please login.');
+            setPopupType('success');
+            setShowPopup(true);
+            // Wait for popup to show before navigating
+            setTimeout(() => {
+                navigate('/');
+            }, 1000);
         } catch (err) {
-            console.error('Registration error:', err);
             setError(err.message);
+            setPopupMessage(err.message);
+            setPopupType('error');
+            setShowPopup(true);
         }
     };
 
     return (
         <div className={styles.modal}>
+            {showPopup && (
+                <Popup
+                    message={popupMessage}
+                    type={popupType}
+                    onClose={() => setShowPopup(false)}
+                />
+            )}
             <div className={styles.modal_content}>
                 {error && <p className={styles.error}>{error}</p>}
                 <form className={styles.modal_form} onSubmit={handleSubmit}>
