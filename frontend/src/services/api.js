@@ -1,5 +1,5 @@
 // Use the environment variable or fallback to the production URL
-const API_URL = import.meta.env.VITE_API_URL || 'https://gamechat-3-backend.onrender.com/api';
+const API_URL = '/api';
 
 // Debug logging
 console.log('Current API URL:', API_URL);
@@ -9,7 +9,7 @@ const handleResponse = async (response) => {
   try {
     const data = await response.json();
     if (!response.ok) {
-      throw new Error(data.message || 'An error occurred');
+      throw new Error(data.message || `Request failed with status ${response.status}`);
     }
     return data;
   } catch (error) {
@@ -21,7 +21,15 @@ const handleResponse = async (response) => {
 export const login = async (username, password) => {
   try {
     const url = `${API_URL}/auth/login`;
-    console.log('Attempting login to:', url);
+    console.log('Login request details:', {
+      url,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: { username, password: '***' }
+    });
     
     const response = await fetch(url, {
       method: 'POST',
@@ -30,10 +38,16 @@ export const login = async (username, password) => {
         'Accept': 'application/json'
       },
       body: JSON.stringify({ username, password }),
-      credentials: 'include',
-      mode: 'cors'
+      credentials: 'include'
     });
     
+    console.log('Login response:', {
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries()),
+      url: response.url
+    });
+
     const data = await handleResponse(response);
     
     // Store token in localStorage
@@ -43,7 +57,7 @@ export const login = async (username, password) => {
     return data;
   } catch (error) {
     console.error('Login error:', error);
-    throw new Error(error.message || 'Failed to connect to the server');
+    throw error;
   }
 };
 
@@ -67,8 +81,7 @@ export const register = async (username, email, password) => {
         'Accept': 'application/json'
       },
       body: JSON.stringify({ username, email, password }),
-      credentials: 'include',
-      mode: 'cors'
+      credentials: 'include'
     });
     
     console.log('Registration response:', {
@@ -78,16 +91,6 @@ export const register = async (username, email, password) => {
       url: response.url
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('Registration failed:', {
-        status: response.status,
-        statusText: response.statusText,
-        errorData
-      });
-      throw new Error(errorData.message || `Registration failed: ${response.status} ${response.statusText}`);
-    }
-    
     const data = await handleResponse(response);
     
     // Store token in localStorage
@@ -97,36 +100,32 @@ export const register = async (username, email, password) => {
     return data;
   } catch (error) {
     console.error('Registration error:', error);
-    throw new Error(error.message || 'Failed to connect to the server');
-<<<<<<< HEAD
+    throw error;
   }
 };
 
 export const getOnlineUsers = async () => {
   try {
-    const response = await fetch(`${API_URL}/auth/online-users`, {
+    const url = `${API_URL}/auth/online-users`;
+    const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     });
     
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.message);
-    }
-    
+    const data = await handleResponse(response);
     return data;
   } catch (error) {
+    console.error('Get online users error:', error);
     throw error;
-=======
->>>>>>> c74dc5aafb1578e74ac5d7528712b380d8eea3f2
   }
 };
 
 export const updateStatus = async (status) => {
   try {
     const user = JSON.parse(localStorage.getItem('user'));
-    const response = await fetch(`${API_URL}/auth/status`, {
+    const url = `${API_URL}/auth/status`;
+    const response = await fetch(url, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -135,13 +134,10 @@ export const updateStatus = async (status) => {
       body: JSON.stringify({ userId: user.id, status })
     });
     
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.message);
-    }
-    
+    const data = await handleResponse(response);
     return data;
   } catch (error) {
+    console.error('Update status error:', error);
     throw error;
   }
 };

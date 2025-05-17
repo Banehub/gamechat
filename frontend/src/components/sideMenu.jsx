@@ -1,26 +1,24 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from "../styles/sideMenu.module.css";
 import { getOnlineUsers, logout } from '../services/api';
-=======
-import styles from "../styles/sidemenu.module.css";
->>>>>>> c74dc5aafb1578e74ac5d7528712b380d8eea3f2
-=======
-import styles from "../styles/sidemenu.module.css";
->>>>>>> c74dc5aafb1578e74ac5d7528712b380d8eea3f2
 
 export default function SideMenu() {
     const [onlineUsers, setOnlineUsers] = useState([]);
     const [error, setError] = useState('');
-    const [currentUser, setCurrentUser] = useState(null);
+    const [currentUser] = useState(() => {
+        // Initialize current user from localStorage only once
+        const user = JSON.parse(localStorage.getItem('user'));
+        return user;
+    });
     const navigate = useNavigate();
 
     const fetchOnlineUsers = async () => {
         try {
             const users = await getOnlineUsers();
-            setOnlineUsers(users);
+            // Filter out the current user from the online users list
+            const filteredUsers = users.filter(user => user._id !== currentUser?.id);
+            setOnlineUsers(filteredUsers);
             setError('');
         } catch (err) {
             setError('Failed to fetch online users');
@@ -29,15 +27,15 @@ export default function SideMenu() {
     };
 
     useEffect(() => {
-        // Get current user from localStorage
-        const user = JSON.parse(localStorage.getItem('user'));
-        setCurrentUser(user);
-        
+        // Initial fetch
         fetchOnlineUsers();
+        
         // Refresh online users every 30 seconds
         const interval = setInterval(fetchOnlineUsers, 30000);
+        
+        // Cleanup interval on unmount
         return () => clearInterval(interval);
-    }, []);
+    }, []); // Empty dependency array since we don't need to re-run this effect
 
     const handleLogout = async () => {
         try {
@@ -54,7 +52,7 @@ export default function SideMenu() {
                 <h2 className={styles.title}>Online Users</h2>
                 {error && <p className={styles.error}>{error}</p>}
                 {onlineUsers.length === 0 ? (
-                    <p className={styles.noUsers}>No users online</p>
+                    <p className={styles.noUsers}>No other users online</p>
                 ) : (
                     onlineUsers.map((user) => (
                         <div key={user._id} className={styles.userItem}>
