@@ -3,12 +3,14 @@
     top: 0;
     left: 0;
     width: 200px;
-    height: 100%;
+    height: 96%;
     background-color: #2e2e2e;
     z-index: 1;
-    overflow: visible;
+    overflow: hidden;
     padding: 20px 0;
     border-right: 1px solid #fff;
+    display: flex;
+    flex-direction: column;
 }
 
 .title {
@@ -22,6 +24,9 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 20px;
 }
 
 .userItem {
@@ -52,9 +57,60 @@
     background-color: #9e9e9e;
 }
 
+.away {
+    background-color: #FFC107;
+    box-shadow: 0 0 8px #FFC107;
+}
+
 .userName {
     color: #fff;
     font-size: 0.9rem;
+}
+
+.error {
+    color: #ff4d4d;
+    background-color: rgba(255, 77, 77, 0.1);
+    padding: 8px 16px;
+    margin: 0 20px;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+.noUsers {
+    color: #9e9e9e;
+    text-align: center;
+    padding: 20px;
+    font-size: 0.9rem;
+}
+
+.currentUser {
+    padding: 15px 20px;
+    border-top: 1px solid #3a3a3a;
+    background-color: #252525;
+}
+
+.userInfo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.logoutButton {
+    width: 100%;
+    padding: 8px;
+    background-color: #ff4d4d;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+}
+
+.logoutButton:hover {
+    background-color: #ff3333;
 }
 
     

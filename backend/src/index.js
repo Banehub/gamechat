@@ -8,22 +8,94 @@ const authRoutes = require('./routes/auth');
 
 const app = express();
 const server = http.createServer(app);
+
+// Get frontend URL from environment variable or use default
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://gamechat-3-front-end.onrender.com";
+
+console.log('Frontend URL:', FRONTEND_URL); // Debug log
+
 const io = socketIo(server, {
   cors: {
-    origin: "http://localhost:5173", // Your frontend URL
-    methods: ["GET", "POST"]
+    origin: [FRONTEND_URL, "http://localhost:5173"],
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
 // Middleware
 app.use(cors({
-  origin: "http://localhost:5173", // Your frontend URL
-  credentials: true
+  origin: [FRONTEND_URL, "http://localhost:5173"],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  exposedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Add request logging middleware
+app.use((req, res, next) => {
+  console.log('Incoming request:', {
+    method: req.method,
+    url: req.url,
+    path: req.path,
+    originalUrl: req.originalUrl,
+    baseUrl: req.baseUrl,
+    headers: req.headers,
+    body: req.body,
+    query: req.query,
+    params: req.params
+  });
+  next();
+});
+
+// Add error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  console.error('Request details:', {
+    method: req.method,
+    url: req.url,
+    path: req.path,
+    originalUrl: req.originalUrl,
+    baseUrl: req.baseUrl
+  });
+  res.status(500).json({ message: 'Internal server error', error: err.message });
+});
+
 app.use(express.json());
 
 // Routes
-app.use('/api/auth', authRoutes);
+console.log('Mounting auth routes at /api/auth');
+app.use('/api/auth', (req, res, next) => {
+  console.log('Auth route accessed:', {
+    method: req.method,
+    url: req.url,
+    path: req.path,
+    originalUrl: req.originalUrl,
+    baseUrl: req.baseUrl
+  });
+  next();
+}, authRoutes);
+
+// Basic route for testing
+app.get('/', (req, res) => {
+  res.json({ message: 'GameChat Backend API' });
+});
+
+// Add a catch-all route for debugging
+app.use('*', (req, res) => {
+  console.log('404 - Route not found:', {
+    url: req.url,
+    path: req.path,
+    originalUrl: req.originalUrl,
+    baseUrl: req.baseUrl,
+    method: req.method,
+    headers: req.headers
+  });
+  res.status(404).json({ 
+    message: 'Route not found',
+    requestedUrl: req.originalUrl,
+    availableRoutes: ['/api/auth/register', '/api/auth/login']
+  });
+});
 
 // MongoDB Connection
 const MONGODB_URI = 'mongodb+srv://williefbeukes:dAZlNQUZCBcKBi58@cluster0.ra02y7n.mongodb.net/gamechat';
@@ -40,6 +112,7 @@ mongoose.connect(MONGODB_URI, {
 })
 .catch(err => {
   console.error('MongoDB connection error:', err);
+  console.error('MongoDB URI:', MONGODB_URI.replace(/:[^:]*@/, ':****@')); // Hide password in logs
   process.exit(1); // Exit if cannot connect to database
 });
 

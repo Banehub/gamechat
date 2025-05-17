@@ -3,14 +3,44 @@ const router = express.Router();
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
+// Get JWT secret from environment or use a default (not recommended for production)
+const JWT_SECRET = process.env.JWT_SECRET || '654965189491';
+
+console.log('Auth routes initialized');
+
 // Register endpoint
 router.post('/register', async (req, res) => {
   try {
+    console.log('Register request received:', {
+      body: req.body,
+      headers: req.headers,
+      url: req.url,
+      method: req.method
+    });
+
     const { username, email, password } = req.body;
+
+    if (!username || !email || !password) {
+      console.log('Missing required fields:', { 
+        username: username || 'missing', 
+        email: email || 'missing', 
+        password: password ? 'provided' : 'missing' 
+      });
+      return res.status(400).json({ message: 'All fields are required' });
+    }
 
     // Check if user already exists
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
     if (existingUser) {
+      console.log('User already exists:', { 
+        email, 
+        username,
+        existingUser: {
+          id: existingUser._id,
+          email: existingUser.email,
+          username: existingUser.username
+        }
+      });
       return res.status(400).json({ message: 'User already exists' });
     }
 
@@ -22,11 +52,16 @@ router.post('/register', async (req, res) => {
     });
 
     await user.save();
+    console.log('New user created:', { 
+      id: user._id,
+      username: user.username, 
+      email: user.email 
+    });
 
     // Create token
     const token = jwt.sign(
       { userId: user._id },
-      process.env.JWT_SECRET || 'your-secret-key',
+      JWT_SECRET,
       { expiresIn: '24h' }
     );
 
@@ -40,6 +75,7 @@ router.post('/register', async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Error in register endpoint:', error);
     res.status(500).json({ message: 'Error creating user', error: error.message });
   }
 });
@@ -61,10 +97,14 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
+    // Update user status to online
+    user.status = 'online';
+    await user.save();
+
     // Create token
     const token = jwt.sign(
       { userId: user._id },
-      process.env.JWT_SECRET || 'your-secret-key',
+      JWT_SECRET,
       { expiresIn: '24h' }
     );
 
@@ -74,11 +114,45 @@ router.post('/login', async (req, res) => {
       user: {
         id: user._id,
         username: user.username,
-        email: user.email
+        email: user.email,
+        status: user.status
       }
     });
   } catch (error) {
+    console.error('Error in login endpoint:', error);
     res.status(500).json({ message: 'Error logging in', error: error.message });
+  }
+});
+
+// Get online users endpoint
+router.get('/online-users', async (req, res) => {
+  try {
+    const onlineUsers = await User.find({ status: 'online' })
+      .select('username status')
+      .sort({ username: 1 });
+    
+    res.json(onlineUsers);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching online users', error: error.message });
+  }
+});
+
+// Update user status endpoint
+router.put('/status', async (req, res) => {
+  try {
+    const { userId, status } = req.body;
+    
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    user.status = status;
+    await user.save();
+
+    res.json({ message: 'Status updated successfully', status: user.status });
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating status', error: error.message });
   }
 });
 
