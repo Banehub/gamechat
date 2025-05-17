@@ -8,8 +8,7 @@ const messageSchema = new mongoose.Schema({
   },
   receiver: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+    ref: 'User'
   },
   content: {
     type: String,
@@ -19,6 +18,16 @@ const messageSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  isGroupMessage: {
+    type: Boolean,
+    default: false
+  },
+  roomId: {
+    type: String
+  },
+  senderName: {
+    type: String
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -27,5 +36,6 @@ const messageSchema = new mongoose.Schema({
 
 // Create compound index for efficient querying of conversations
 messageSchema.index({ sender: 1, receiver: 1, createdAt: -1 });
+messageSchema.index({ roomId: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Message', messageSchema); 

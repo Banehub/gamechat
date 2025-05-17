@@ -23,37 +23,29 @@ console.log('Environment Configuration:', {
   MONGODB_URI: MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//****:****@'), // Hide credentials
 });
 
-const allowedOrigins = [
-  FRONTEND_URL,
-  "https://gamechat-3-front-end.onrender.com",
-  "http://localhost:5173"
-];
+// CORS configuration
+const corsOptions = {
+  origin: [
+    'http://localhost:5174',
+    'http://localhost:5173',
+    'https://gamechat-3-front-end.onrender.com'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
 
 const io = socketIo(server, {
   cors: {
-    origin: allowedOrigins,
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true
+    origin: corsOptions.origin,
+    methods: corsOptions.methods,
+    credentials: corsOptions.credentials
   }
 });
 
 // Basic middleware
 app.use(express.json());
-app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) === -1) {
-      console.log('Blocked by CORS:', origin);
-      return callback(new Error('Not allowed by CORS'), false);
-    }
-    return callback(null, true);
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
-}));
+app.use(cors(corsOptions));
 
 // Request logging middleware
 app.use((req, res, next) => {

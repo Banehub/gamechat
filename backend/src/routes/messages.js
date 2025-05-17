@@ -65,4 +65,38 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
+// Get group chat messages
+router.get('/group/:roomId', auth, async (req, res) => {
+  try {
+    const messages = await Message.find({
+      roomId: req.params.roomId,
+      isGroupMessage: true
+    })
+    .sort({ createdAt: 1 })
+    .populate('sender', 'username');
+
+    res.json(messages);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching group messages', error: error.message });
+  }
+});
+
+// Send group message
+router.post('/group', auth, async (req, res) => {
+  try {
+    const { content, roomId, senderName } = req.body;
+    const message = new Message({
+      sender: req.userId,
+      content,
+      roomId,
+      isGroupMessage: true,
+      senderName
+    });
+    await message.save();
+    res.status(201).json(message);
+  } catch (error) {
+    res.status(500).json({ message: 'Error sending group message', error: error.message });
+  }
+});
+
 module.exports = router; 

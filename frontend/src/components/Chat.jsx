@@ -3,6 +3,7 @@ import { io } from 'socket.io-client';
 import styles from '../styles/chat.module.css';
 import VideoCallModal from './VideoCallModal';
 import IncomingCallModal from './IncomingCallModal';
+import GroupChatModal from './GroupChatModal';
 import webrtcService from '../services/webrtc';
 
 export default function Chat({ selectedUser }) {
@@ -13,8 +14,10 @@ export default function Chat({ selectedUser }) {
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
   const [incomingCall, setIncomingCall] = useState(null);
+  const [groupParticipants, setGroupParticipants] = useState([]);
   const messagesEndRef = useRef(null);
   const currentUser = JSON.parse(localStorage.getItem('user'));
+  const isGroupChat = selectedUser?._id === 'group';
 
   useEffect(() => {
     // Initialize socket connection
@@ -32,60 +35,85 @@ export default function Chat({ selectedUser }) {
   useEffect(() => {
     if (!socket || !selectedUser) return;
 
-    // Join private chat room
-    const roomId = [currentUser.id, selectedUser._id].sort().join('-');
-    socket.emit('join_room', roomId);
+    if (isGroupChat) {
+      // Join group chat room
+      socket.emit('join_group_chat', 'general');
+      
+      // Listen for group messages
+      socket.on('group_message', (message) => {
+        setMessages(prev => [...prev, message]);
+      });
 
-    // Listen for new messages
-    socket.on('receive_message', (message) => {
-      setMessages(prev => [...prev, message]);
-    });
+      // Listen for participant updates
+      socket.on('group_participants_update', (participants) => {
+        setGroupParticipants(participants);
+      });
 
-    // WebRTC signaling
-    socket.on('call_offer', async ({ offer, from }) => {
-      console.log('Received call offer from:', from);
-      try {
-        // Store the incoming call information
-        setIncomingCall({ offer, from });
-      } catch (error) {
-        console.error('Error handling call offer:', error);
-      }
-    });
+      // Fetch group chat history
+      fetchGroupChatHistory();
+    } else {
+      // Join private chat room
+      const roomId = [currentUser.id, selectedUser._id].sort().join('-');
+      socket.emit('join_room', roomId);
 
-    socket.on('call_answer', async (answer) => {
-      try {
-        await webrtcService.handleAnswer(answer);
-      } catch (error) {
-        console.error('Error handling call answer:', error);
-      }
-    });
+      // Listen for new messages
+      socket.on('receive_message', (message) => {
+        setMessages(prev => [...prev, message]);
+      });
 
-    socket.on('ice_candidate', async (candidate) => {
-      try {
-        await webrtcService.addIceCandidate(candidate);
-      } catch (error) {
-        console.error('Error adding ICE candidate:', error);
-      }
-    });
+      // WebRTC signaling
+      socket.on('call_offer', async ({ offer, from }) => {
+        console.log('Received call offer from:', from);
+        try {
+          setIncomingCall({ offer, from });
+        } catch (error) {
+          console.error('Error handling call offer:', error);
+        }
+      });
 
-    socket.on('call_declined', () => {
-      endCall();
-    });
+      socket.on('call_answer', async (answer) => {
+        try {
+          await webrtcService.handleAnswer(answer);
+        } catch (error) {
+          console.error('Error handling call answer:', error);
+        }
+      });
 
-    // Fetch chat history
-    fetchChatHistory(selectedUser._id);
+      socket.on('ice_candidate', async (candidate) => {
+        try {
+          await webrtcService.addIceCandidate(candidate);
+        } catch (error) {
+          console.error('Error adding ICE candidate:', error);
+        }
+      });
+
+      socket.on('call_declined', () => {
+        endCall();
+      });
+
+      // Fetch chat history
+      fetchChatHistory(selectedUser._id);
+    }
 
     return () => {
-      socket.emit('leave_room', roomId);
-      socket.off('receive_message');
-      socket.off('call_offer');
-      socket.off('call_answer');
-      socket.off('ice_candidate');
-      socket.off('call_declined');
+      if (isGroupChat) {
+        socket.emit('leave_group_chat', 'general');
+        socket.off('group_message');
+        socket.off('group_participants_update');
+      } else {
+        socket.emit('leave_room', roomId);
+        socket.off('receive_message');
+        socket.off('call_offer');
+        socket.off('call_answer');
+        socket.off('ice_candidate');
+        socket.off('call_declined');
+      }
     };
   }, [socket, selectedUser]);
 
   const startCall = async () => {
+    if (isGroupChat) return; // Don't allow calls in group chat
+    
     try {
       await webrtcService.initializePeerConnection();
       webrtcService.setOnTrack((stream) => {
@@ -185,35 +213,76 @@ export default function Chat({ selectedUser }) {
     }
   };
 
-  const sendMessage = async (e) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !selectedUser) return;
-
-    const messageData = {
-      content: newMessage,
-      sender: currentUser.id,
-      receiver: selectedUser._id,
-      roomId: [currentUser.id, selectedUser._id].sort().join('-')
-    };
-
+  const fetchGroupChatHistory = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/messages`, {
-        method: 'POST',
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/messages/group/general`, {
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(messageData)
+        }
       });
-
-      if (response.ok) {
-        const message = await response.json();
-        setMessages(prev => [...prev, message]);
-        socket.emit('send_message', message);
-        setNewMessage('');
-      }
+      const data = await response.json();
+      setMessages(data);
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('Error fetching group chat history:', error);
+    }
+  };
+
+  const sendMessage = async (message) => {
+    if (!message.trim() || !selectedUser) return;
+
+    if (isGroupChat) {
+      const messageData = {
+        content: message,
+        sender: currentUser.id,
+        senderName: currentUser.username,
+        roomId: 'general',
+        timestamp: new Date().toISOString()
+      };
+
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/messages/group`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify(messageData)
+        });
+
+        if (response.ok) {
+          const newMessage = await response.json();
+          setMessages(prev => [...prev, newMessage]);
+          socket.emit('group_message', newMessage);
+        }
+      } catch (error) {
+        console.error('Error sending group message:', error);
+      }
+    } else {
+      const messageData = {
+        content: message,
+        sender: currentUser.id,
+        receiver: selectedUser._id,
+        roomId: [currentUser.id, selectedUser._id].sort().join('-')
+      };
+
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/messages`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify(messageData)
+        });
+
+        if (response.ok) {
+          const newMessage = await response.json();
+          setMessages(prev => [...prev, newMessage]);
+          socket.emit('send_message', newMessage);
+        }
+      } catch (error) {
+        console.error('Error sending message:', error);
+      }
     }
   };
 
@@ -229,6 +298,17 @@ export default function Chat({ selectedUser }) {
           <p>Select a user to start chatting</p>
         </div>
       </div>
+    );
+  }
+
+  if (isGroupChat) {
+    return (
+      <GroupChatModal
+        messages={messages}
+        onSendMessage={sendMessage}
+        participants={groupParticipants}
+        currentUser={currentUser}
+      />
     );
   }
 
@@ -259,13 +339,17 @@ export default function Chat({ selectedUser }) {
               message.sender === currentUser.id ? styles.sent : styles.received
             }`}
           >
-            {message.content}
+            <div className={styles.messageContent}>{message.content}</div>
           </div>
         ))}
         <div ref={messagesEndRef} />
       </div>
       <div className={styles.inputContainer}>
-        <form onSubmit={sendMessage}>
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          sendMessage(newMessage);
+          setNewMessage('');
+        }}>
           <input
             type="text"
             value={newMessage}

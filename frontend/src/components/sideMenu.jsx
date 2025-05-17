@@ -63,6 +63,10 @@ export default function SideMenu({ onSelectUser }) {
         onSelectUser(user);
     };
 
+    const handleGroupChatClick = () => {
+        onSelectUser({ _id: 'group', username: 'Group Chat' });
+    };
+
     return (
         <div className={styles.sideMenu}>
             {showPopup && (
@@ -72,6 +76,16 @@ export default function SideMenu({ onSelectUser }) {
                     onClose={() => setShowPopup(false)}
                 />
             )}
+            <div className={styles.groupChat}>
+                <h2 className={styles.title}>Group Chat</h2>
+                <div 
+                    className={styles.groupChatItem}
+                    onClick={handleGroupChatClick}
+                >
+                    <span className={styles.groupIcon}>👥</span>
+                    <span className={styles.groupName}>General Chat</span>
+                </div>
+            </div>
             <div className={styles.userList}>
                 <h2 className={styles.title}>Online Users</h2>
                 {error && <p className={styles.error}>{error}</p>}
