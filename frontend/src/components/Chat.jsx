@@ -1,11 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import styles from '../styles/chat.module.css';
+import VideoCallModal from './VideoCallModal';
+import webrtcService from '../services/webrtc';
 
 export default function Chat({ selectedUser }) {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [socket, setSocket] = useState(null);
+  const [isInCall, setIsInCall] = useState(false);
+  const [localStream, setLocalStream] = useState(null);
+  const [remoteStream, setRemoteStream] = useState(null);
   const messagesEndRef = useRef(null);
   const currentUser = JSON.parse(localStorage.getItem('user'));
 
@@ -31,14 +36,107 @@ export default function Chat({ selectedUser }) {
       setMessages(prev => [...prev, message]);
     });
 
+    // WebRTC signaling
+    socket.on('call_offer', async (offer) => {
+      try {
+        await webrtcService.initializePeerConnection();
+        webrtcService.setOnTrack((stream) => {
+          setRemoteStream(stream);
+        });
+        webrtcService.setOnIceCandidate((candidate) => {
+          socket.emit('ice_candidate', { candidate, to: selectedUser._id });
+        });
+        const answer = await webrtcService.handleOffer(offer);
+        socket.emit('call_answer', { answer, to: selectedUser._id });
+        setIsInCall(true);
+      } catch (error) {
+        console.error('Error handling call offer:', error);
+      }
+    });
+
+    socket.on('call_answer', async (answer) => {
+      try {
+        await webrtcService.handleAnswer(answer);
+      } catch (error) {
+        console.error('Error handling call answer:', error);
+      }
+    });
+
+    socket.on('ice_candidate', async (candidate) => {
+      try {
+        await webrtcService.addIceCandidate(candidate);
+      } catch (error) {
+        console.error('Error adding ICE candidate:', error);
+      }
+    });
+
     // Fetch chat history
     fetchChatHistory(selectedUser._id);
 
     return () => {
       socket.emit('leave_room', roomId);
       socket.off('receive_message');
+      socket.off('call_offer');
+      socket.off('call_answer');
+      socket.off('ice_candidate');
     };
   }, [socket, selectedUser]);
+
+  const startCall = async () => {
+    try {
+      await webrtcService.initializePeerConnection();
+      webrtcService.setOnTrack((stream) => {
+        setRemoteStream(stream);
+      });
+      webrtcService.setOnIceCandidate((candidate) => {
+        socket.emit('ice_candidate', { candidate, to: selectedUser._id });
+      });
+
+      const stream = await webrtcService.startLocalStream();
+      setLocalStream(stream);
+
+      const offer = await webrtcService.createOffer();
+      socket.emit('call_offer', { offer, to: selectedUser._id });
+      setIsInCall(true);
+    } catch (error) {
+      console.error('Error starting call:', error);
+    }
+  };
+
+  const endCall = () => {
+    webrtcService.close();
+    setLocalStream(null);
+    setRemoteStream(null);
+    setIsInCall(false);
+  };
+
+  const toggleVideo = async (enabled) => {
+    if (localStream) {
+      localStream.getVideoTracks().forEach(track => {
+        track.enabled = enabled;
+      });
+    }
+  };
+
+  const toggleAudio = async (enabled) => {
+    if (localStream) {
+      localStream.getAudioTracks().forEach(track => {
+        track.enabled = enabled;
+      });
+    }
+  };
+
+  const toggleScreenShare = async (enabled) => {
+    try {
+      if (enabled) {
+        await webrtcService.startScreenShare();
+      } else {
+        await webrtcService.stopScreenShare();
+      }
+    } catch (error) {
+      console.error('Error toggling screen share:', error);
+    }
+  };
 
   const fetchChatHistory = async (userId) => {
     try {
@@ -66,7 +164,6 @@ export default function Chat({ selectedUser }) {
     };
 
     try {
-      // Send message to server
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/messages`, {
         method: 'POST',
         headers: {
@@ -104,10 +201,16 @@ export default function Chat({ selectedUser }) {
 
   return (
     <div className={styles.chatContainer}>
-      <div className={styles.chatHeader}>
-        <h2>Chat with {selectedUser.username}</h2>
-      </div>
-      
+      {isInCall && (
+        <VideoCallModal
+          localStream={localStream}
+          remoteStream={remoteStream}
+          onEndCall={endCall}
+          onToggleVideo={toggleVideo}
+          onToggleAudio={toggleAudio}
+          onToggleScreenShare={toggleScreenShare}
+        />
+      )}
       <div className={styles.messagesContainer}>
         {messages.map((message, index) => (
           <div
@@ -116,29 +219,30 @@ export default function Chat({ selectedUser }) {
               message.sender === currentUser.id ? styles.sent : styles.received
             }`}
           >
-            <div className={styles.messageContent}>
-              {message.content}
-            </div>
-            <div className={styles.messageTime}>
-              {new Date(message.createdAt).toLocaleTimeString()}
-            </div>
+            {message.content}
           </div>
         ))}
         <div ref={messagesEndRef} />
       </div>
-
-      <form onSubmit={sendMessage} className={styles.messageForm}>
-        <input
-          type="text"
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          placeholder="Type a message..."
-          className={styles.messageInput}
-        />
-        <button type="submit" className={styles.sendButton}>
-          Send
-        </button>
-      </form>
+      <div className={styles.inputContainer}>
+        <form onSubmit={sendMessage}>
+          <input
+            type="text"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Type a message..."
+            className={styles.messageInput}
+          />
+          <button type="submit" className={styles.sendButton}>
+            Send
+          </button>
+        </form>
+        {!isInCall && (
+          <button onClick={startCall} className={styles.callButton}>
+            Start Video Call
+          </button>
+        )}
+      </div>
     </div>
   );
 } 
