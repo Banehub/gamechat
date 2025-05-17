@@ -1,5 +1,5 @@
 // Use the environment variable or fallback to the production URL
-const API_URL = '/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://gamechat-3-back-end.onrender.com/api';
 
 // Debug logging
 console.log('Current API URL:', API_URL);
@@ -7,13 +7,23 @@ console.log('Environment variables:', import.meta.env);
 
 const handleResponse = async (response) => {
   try {
-    const data = await response.json();
+    // Check if the response is empty
+    const text = await response.text();
+    if (!text) {
+      throw new Error('Empty response received from server');
+    }
+
+    // Parse the response text as JSON
+    const data = JSON.parse(text);
+    
     if (!response.ok) {
       throw new Error(data.message || `Request failed with status ${response.status}`);
     }
     return data;
   } catch (error) {
     console.error('Response handling error:', error);
+    console.error('Response status:', response.status);
+    console.error('Response headers:', Object.fromEntries(response.headers.entries()));
     throw error;
   }
 };

@@ -12,11 +12,17 @@ const server = http.createServer(app);
 // Get frontend URL from environment variable or use default
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
-console.log('Frontend URL:', FRONTEND_URL); // Debug log
+console.log('Frontend URL:', FRONTEND_URL);
+
+const allowedOrigins = [
+  FRONTEND_URL,
+  "https://gamechat-3-front-end.onrender.com",
+  "http://localhost:5173"
+];
 
 const io = socketIo(server, {
   cors: {
-    origin: FRONTEND_URL,
+    origin: allowedOrigins,
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
   }
@@ -25,7 +31,16 @@ const io = socketIo(server, {
 // Basic middleware
 app.use(express.json());
 app.use(cors({
-  origin: FRONTEND_URL,
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      console.log('Blocked by CORS:', origin);
+      return callback(new Error('Not allowed by CORS'), false);
+    }
+    return callback(null, true);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
