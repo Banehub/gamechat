@@ -17,8 +17,8 @@ io.on('connection', (socket) => {
   });
 
   // WebRTC signaling
-  socket.on('call_offer', ({ offer, to }) => {
-    io.to(to).emit('call_offer', offer);
+  socket.on('call_offer', ({ offer, to, from }) => {
+    io.to(to).emit('call_offer', { offer, from });
   });
 
   socket.on('call_answer', ({ answer, to }) => {
@@ -27,6 +27,10 @@ io.on('connection', (socket) => {
 
   socket.on('ice_candidate', ({ candidate, to }) => {
     io.to(to).emit('ice_candidate', candidate);
+  });
+
+  socket.on('call_declined', ({ to }) => {
+    io.to(to).emit('call_declined');
   });
 
   socket.on('disconnect', () => {

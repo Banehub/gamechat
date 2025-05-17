@@ -1,0 +1,81 @@
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modalContent {
+    background-color: white;
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    min-width: 300px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.callInfo {
+    margin-bottom: 30px;
+}
+
+.avatar {
+    width: 80px;
+    height: 80px;
+    background-color: #007bff;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2em;
+    margin: 0 auto 20px;
+}
+
+.callInfo h2 {
+    margin: 0 0 10px;
+    color: #333;
+}
+
+.callInfo p {
+    margin: 0;
+    color: #666;
+}
+
+.controls {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.button {
+    padding: 12px 30px;
+    border: none;
+    border-radius: 25px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.acceptButton {
+    background-color: #28a745;
+    color: white;
+}
+
+.acceptButton:hover {
+    background-color: #218838;
+}
+
+.declineButton {
+    background-color: #dc3545;
+    color: white;
+}
+
+.declineButton:hover {
+    background-color: #c82333;
+} 

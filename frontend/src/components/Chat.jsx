@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import styles from '../styles/chat.module.css';
 import VideoCallModal from './VideoCallModal';
+import IncomingCallModal from './IncomingCallModal';
 import webrtcService from '../services/webrtc';
 
 export default function Chat({ selectedUser }) {
@@ -11,6 +12,7 @@ export default function Chat({ selectedUser }) {
   const [isInCall, setIsInCall] = useState(false);
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
+  const [incomingCall, setIncomingCall] = useState(null);
   const messagesEndRef = useRef(null);
   const currentUser = JSON.parse(localStorage.getItem('user'));
 
@@ -37,18 +39,10 @@ export default function Chat({ selectedUser }) {
     });
 
     // WebRTC signaling
-    socket.on('call_offer', async (offer) => {
+    socket.on('call_offer', async ({ offer, from }) => {
       try {
-        await webrtcService.initializePeerConnection();
-        webrtcService.setOnTrack((stream) => {
-          setRemoteStream(stream);
-        });
-        webrtcService.setOnIceCandidate((candidate) => {
-          socket.emit('ice_candidate', { candidate, to: selectedUser._id });
-        });
-        const answer = await webrtcService.handleOffer(offer);
-        socket.emit('call_answer', { answer, to: selectedUser._id });
-        setIsInCall(true);
+        // Store the incoming call information
+        setIncomingCall({ offer, from });
       } catch (error) {
         console.error('Error handling call offer:', error);
       }
@@ -70,6 +64,10 @@ export default function Chat({ selectedUser }) {
       }
     });
 
+    socket.on('call_declined', () => {
+      endCall();
+    });
+
     // Fetch chat history
     fetchChatHistory(selectedUser._id);
 
@@ -79,6 +77,7 @@ export default function Chat({ selectedUser }) {
       socket.off('call_offer');
       socket.off('call_answer');
       socket.off('ice_candidate');
+      socket.off('call_declined');
     };
   }, [socket, selectedUser]);
 
@@ -96,10 +95,39 @@ export default function Chat({ selectedUser }) {
       setLocalStream(stream);
 
       const offer = await webrtcService.createOffer();
-      socket.emit('call_offer', { offer, to: selectedUser._id });
+      socket.emit('call_offer', { offer, to: selectedUser._id, from: currentUser });
       setIsInCall(true);
     } catch (error) {
       console.error('Error starting call:', error);
+    }
+  };
+
+  const handleAcceptCall = async () => {
+    try {
+      await webrtcService.initializePeerConnection();
+      webrtcService.setOnTrack((stream) => {
+        setRemoteStream(stream);
+      });
+      webrtcService.setOnIceCandidate((candidate) => {
+        socket.emit('ice_candidate', { candidate, to: incomingCall.from.id });
+      });
+
+      const stream = await webrtcService.startLocalStream();
+      setLocalStream(stream);
+
+      const answer = await webrtcService.handleOffer(incomingCall.offer);
+      socket.emit('call_answer', { answer, to: incomingCall.from.id });
+      setIsInCall(true);
+      setIncomingCall(null);
+    } catch (error) {
+      console.error('Error accepting call:', error);
+    }
+  };
+
+  const handleDeclineCall = () => {
+    if (incomingCall) {
+      socket.emit('call_declined', { to: incomingCall.from.id });
+      setIncomingCall(null);
     }
   };
 
@@ -108,6 +136,7 @@ export default function Chat({ selectedUser }) {
     setLocalStream(null);
     setRemoteStream(null);
     setIsInCall(false);
+    setIncomingCall(null);
   };
 
   const toggleVideo = async (enabled) => {
@@ -209,6 +238,13 @@ export default function Chat({ selectedUser }) {
           onToggleVideo={toggleVideo}
           onToggleAudio={toggleAudio}
           onToggleScreenShare={toggleScreenShare}
+        />
+      )}
+      {incomingCall && (
+        <IncomingCallModal
+          caller={incomingCall.from}
+          onAccept={handleAcceptCall}
+          onDecline={handleDeclineCall}
         />
       )}
       <div className={styles.messagesContainer}>
