@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styles from "../styles/sideMenu.module.css";
+import styles from "../styles/sidemenu.module.css";
 import { getOnlineUsers, logout } from '../services/api';
 
 export default function SideMenu() {
