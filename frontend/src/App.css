@@ -40,3 +40,19 @@
 .read-the-docs {
   color: #888;
 }
+
+.app {
+  display: flex;
+  height: 100vh;
+  background-color: #f8f9fa;
+}
+
+.mainContent {
+  flex: 1;
+  padding: 1rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Add any additional styles you need */

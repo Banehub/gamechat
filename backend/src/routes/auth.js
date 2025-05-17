@@ -3,10 +3,14 @@ const router = express.Router();
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
-// Get JWT secret from environment or use a default (not recommended for production)
-const JWT_SECRET = process.env.JWT_SECRET || '654965189491';
+// Get JWT secret from environment
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error('WARNING: JWT_SECRET is not set in environment variables');
+  process.exit(1); // Exit if no JWT secret is provided
+}
 
-console.log('Auth routes initialized');
+console.log('Auth routes initialized with JWT configuration');
 
 // Register endpoint
 router.post('/register', async (req, res) => {

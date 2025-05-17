@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import styles from "../styles/sidemenu.module.css";
 import { getOnlineUsers, logout } from '../services/api';
 
-export default function SideMenu() {
+export default function SideMenu({ onSelectUser }) {
     const [onlineUsers, setOnlineUsers] = useState([]);
     const [error, setError] = useState('');
     const [currentUser] = useState(() => {
@@ -46,6 +46,10 @@ export default function SideMenu() {
         }
     };
 
+    const handleUserClick = (user) => {
+        onSelectUser(user);
+    };
+
     return (
         <div className={styles.sideMenu}>
             <div className={styles.userList}>
@@ -55,7 +59,11 @@ export default function SideMenu() {
                     <p className={styles.noUsers}>No other users online</p>
                 ) : (
                     onlineUsers.map((user) => (
-                        <div key={user._id} className={styles.userItem}>
+                        <div 
+                            key={user._id} 
+                            className={styles.userItem}
+                            onClick={() => handleUserClick(user)}
+                        >
                             <span className={`${styles.status} ${styles[user.status]}`}></span>
                             <span className={styles.userName}>{user.username}</span>
                         </div>

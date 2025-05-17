@@ -5,14 +5,23 @@ const cors = require('cors');
 const http = require('http');
 const socketIo = require('socket.io');
 const authRoutes = require('./routes/auth');
+const messageRoutes = require('./routes/messages');
 
 const app = express();
 const server = http.createServer(app);
 
-// Get frontend URL from environment variable or use default
+// Environment variables with defaults
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+const PORT = process.env.PORT || 5000;
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://williefbeukes:dAZlNQUZCBcKBi58@cluster0.ra02y7n.mongodb.net/gamechat';
 
-console.log('Frontend URL:', FRONTEND_URL);
+// Log environment configuration
+console.log('Environment Configuration:', {
+  NODE_ENV: process.env.NODE_ENV || 'development',
+  FRONTEND_URL,
+  PORT,
+  MONGODB_URI: MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//****:****@'), // Hide credentials
+});
 
 const allowedOrigins = [
   FRONTEND_URL,
@@ -64,17 +73,10 @@ app.use((req, res, next) => {
 
 // Routes
 console.log('Mounting auth routes at /api/auth');
-app.use('/api/auth', (req, res, next) => {
-  console.log('Auth route accessed:', {
-    method: req.method,
-    url: req.url,
-    path: req.path,
-    originalUrl: req.originalUrl,
-    baseUrl: req.baseUrl,
-    body: req.body
-  });
-  next();
-}, authRoutes);
+app.use('/api/auth', authRoutes);
+
+console.log('Mounting message routes at /api/messages');
+app.use('/api/messages', messageRoutes);
 
 // Basic route for testing
 app.get('/api', (req, res) => {
@@ -107,13 +109,11 @@ app.use('*', (req, res) => {
   res.status(404).json({ 
     message: 'Route not found',
     requestedUrl: req.originalUrl,
-    availableRoutes: ['/api/auth/register', '/api/auth/login']
+    availableRoutes: ['/api/auth/register', '/api/auth/login', '/api/messages']
   });
 });
 
 // MongoDB Connection
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://williefbeukes:dAZlNQUZCBcKBi58@cluster0.ra02y7n.mongodb.net/gamechat';
-
 mongoose.connect(MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -143,8 +143,9 @@ io.on('connection', (socket) => {
     console.log(`User left room: ${roomId}`);
   });
 
-  socket.on('send_message', (data) => {
-    io.to(data.roomId).emit('receive_message', data);
+  socket.on('send_message', (message) => {
+    // Broadcast the message to all users in the room
+    io.to(message.roomId).emit('receive_message', message);
   });
 
   socket.on('disconnect', () => {
@@ -152,7 +153,6 @@ io.on('connection', (socket) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 }); 
