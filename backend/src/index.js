@@ -98,7 +98,16 @@ app.use('*', (req, res) => {
 });
 
 // MongoDB Connection
-const MONGODB_URI = 'mongodb+srv://williefbeukes:dAZlNQUZCBcKBi58@cluster0.ra02y7n.mongodb.net/gamechat';
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+  console.error('MONGODB_URI is not defined in environment variables');
+  console.error('Please set MONGODB_URI in your environment variables');
+  console.error('Current environment variables:', process.env);
+  process.exit(1);
+}
+
+console.log('Attempting to connect to MongoDB...');
 
 mongoose.connect(MONGODB_URI, {
   useNewUrlParser: true,
@@ -139,12 +148,8 @@ io.on('connection', (socket) => {
   });
 });
 
-// Basic route for testing
-app.get('/', (req, res) => {
-  res.json({ message: 'GameChat Backend API' });
-});
-
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 }); 
+

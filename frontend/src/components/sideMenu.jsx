@@ -1,8 +1,12 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from "../styles/sideMenu.module.css";
 import { getOnlineUsers, logout } from '../services/api';
+=======
+import styles from "../styles/sidemenu.module.css";
+>>>>>>> c74dc5aafb1578e74ac5d7528712b380d8eea3f2
 =======
 import styles from "../styles/sidemenu.module.css";
 >>>>>>> c74dc5aafb1578e74ac5d7528712b380d8eea3f2

@@ -98,6 +98,7 @@ export const register = async (username, email, password) => {
   } catch (error) {
     console.error('Registration error:', error);
     throw new Error(error.message || 'Failed to connect to the server');
+<<<<<<< HEAD
   }
 };
 
@@ -117,6 +118,8 @@ export const getOnlineUsers = async () => {
     return data;
   } catch (error) {
     throw error;
+=======
+>>>>>>> c74dc5aafb1578e74ac5d7528712b380d8eea3f2
   }
 };
 
