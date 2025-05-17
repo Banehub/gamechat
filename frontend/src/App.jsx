@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Login from './pages/Login.jsx';
-import Dashboard from './pages/Dashboard.jsx';
+import Login from './pages/login';
+import Dashboard from './pages/dashboard';
 import SideMenu from './components/sideMenu';
 import Chat from './components/Chat';
 import './App.css';
