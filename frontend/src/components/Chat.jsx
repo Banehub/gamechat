@@ -19,7 +19,10 @@ export default function Chat({ selectedUser }) {
   useEffect(() => {
     // Initialize socket connection
     const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
-      withCredentials: true
+      withCredentials: true,
+      auth: {
+        userId: currentUser.id
+      }
     });
     setSocket(newSocket);
 
@@ -40,6 +43,7 @@ export default function Chat({ selectedUser }) {
 
     // WebRTC signaling
     socket.on('call_offer', async ({ offer, from }) => {
+      console.log('Received call offer from:', from);
       try {
         // Store the incoming call information
         setIncomingCall({ offer, from });
