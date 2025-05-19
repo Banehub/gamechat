@@ -1,9 +1,28 @@
+import React, { useRef, useEffect } from 'react';
 import styles from '../styles/videoCallModal.module.css';
 import CallControls from './CallControls';
 
+function Video({ stream, muted, className }) {
+    const videoRef = useRef(null);
+    useEffect(() => {
+        if (videoRef.current && stream) {
+            videoRef.current.srcObject = stream;
+        }
+    }, [stream]);
+    return (
+        <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted={muted}
+            className={className}
+        />
+    );
+}
+
 export default function VideoCallModal({ 
     localStream, 
-    remoteStream, 
+    remoteStreams,
     onEndCall, 
     onToggleVideo, 
     onToggleAudio, 
@@ -13,31 +32,19 @@ export default function VideoCallModal({
         <div className={styles.modalOverlay}>
             <div className={styles.modalContent}>
                 <div className={styles.videoGrid}>
-                    <div className={styles.remoteVideoContainer}>
-                        <video
-                            autoPlay
-                            playsInline
-                            className={styles.remoteVideo}
-                            ref={video => {
-                                if (video) video.srcObject = remoteStream;
-                            }}
-                        />
-                        {!remoteStream && (
-                            <div className={styles.waitingMessage}>
-                                Waiting for other user to join...
+                    {remoteStreams && remoteStreams.length > 0 ? (
+                        remoteStreams.map((stream, idx) => (
+                            <div className={styles.remoteVideoContainer} key={idx}>
+                                <Video stream={stream} className={styles.remoteVideo} />
                             </div>
-                        )}
-                    </div>
+                        ))
+                    ) : (
+                        <div className={styles.waitingMessage}>
+                            Waiting for other user to join...
+                        </div>
+                    )}
                     <div className={styles.localVideoContainer}>
-                        <video
-                            autoPlay
-                            playsInline
-                            muted
-                            className={styles.localVideo}
-                            ref={video => {
-                                if (video) video.srcObject = localStream;
-                            }}
-                        />
+                        <Video stream={localStream} muted className={styles.localVideo} />
                     </div>
                 </div>
                 <CallControls
