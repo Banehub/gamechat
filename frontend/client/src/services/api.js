@@ -1,37 +1,30 @@
+import http from '../../http';
+
 // Use the environment variable or fallback to the production URL
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 const API_URL = `${BASE_URL}/api`;
 
 // Debug logging
-console.log('Current API URL:', API_URL);
+console.log('Current API URL:', http.defaults.baseURL);
 console.log('Environment variables:', import.meta.env);
 
-const handleResponse = async (response) => {
+const handleResponse = (response) => {
   try {
-    // Check if the response is empty
-    const text = await response.text();
-    if (!text) {
+    if (!response.data) {
       throw new Error('Empty response received from server');
     }
-
-    // Parse the response text as JSON
-    const data = JSON.parse(text);
-    
-    if (!response.ok) {
-      throw new Error(data.message || `Request failed with status ${response.status}`);
-    }
-    return data;
+    return response.data;
   } catch (error) {
     console.error('Response handling error:', error);
-    console.error('Response status:', response.status);
-    console.error('Response headers:', Object.fromEntries(response.headers.entries()));
+    console.error('Response status:', error.response?.status);
+    console.error('Response headers:', error.response?.headers);
     throw error;
   }
 };
 
 export const login = async (username, password) => {
   try {
-    const url = `${API_URL}/auth/login`;
+    const url = '/api/auth/login';
     console.log('Login request details:', {
       url,
       method: 'POST',
@@ -42,24 +35,18 @@ export const login = async (username, password) => {
       body: { username, password: '***' }
     });
     
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({ username, password }),
-      credentials: 'include'
+    const response = await http.post(url, { username, password }, {
+      withCredentials: true
     });
     
     console.log('Login response:', {
       status: response.status,
       statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries()),
-      url: response.url
+      headers: response.headers,
+      url: response.config.url
     });
 
-    const data = await handleResponse(response);
+    const data = handleResponse(response);
     
     // Store token in localStorage
     localStorage.setItem('token', data.token);
@@ -74,7 +61,7 @@ export const login = async (username, password) => {
 
 export const register = async (username, email, password) => {
   try {
-    const url = `${API_URL}/auth/register`;
+    const url = '/api/auth/register';
     console.log('Registration request details:', {
       url,
       method: 'POST',
@@ -85,24 +72,18 @@ export const register = async (username, email, password) => {
       body: { username, email, password: '***' }
     });
     
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({ username, email, password }),
-      credentials: 'include'
+    const response = await http.post(url, { username, email, password }, {
+      withCredentials: true
     });
     
     console.log('Registration response:', {
       status: response.status,
       statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries()),
-      url: response.url
+      headers: response.headers,
+      url: response.config.url
     });
 
-    const data = await handleResponse(response);
+    const data = handleResponse(response);
     
     // Store token in localStorage
     localStorage.setItem('token', data.token);
@@ -117,15 +98,14 @@ export const register = async (username, email, password) => {
 
 export const getOnlineUsers = async () => {
   try {
-    const url = `${API_URL}/auth/online-users`;
-    const response = await fetch(url, {
+    const url = '/api/auth/online-users';
+    const response = await http.get(url, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     });
     
-    const data = await handleResponse(response);
-    return data;
+    return handleResponse(response);
   } catch (error) {
     console.error('Get online users error:', error);
     throw error;
@@ -135,18 +115,17 @@ export const getOnlineUsers = async () => {
 export const updateStatus = async (status) => {
   try {
     const user = JSON.parse(localStorage.getItem('user'));
-    const url = `${API_URL}/auth/status`;
-    const response = await fetch(url, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify({ userId: user.id, status })
-    });
+    const url = '/api/auth/status';
+    const response = await http.put(url, 
+      { userId: user.id, status },
+      {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      }
+    );
     
-    const data = await handleResponse(response);
-    return data;
+    return handleResponse(response);
   } catch (error) {
     console.error('Update status error:', error);
     throw error;
