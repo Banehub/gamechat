@@ -4,8 +4,8 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const authRoutes = require('./routes/auth');
-const messageRoutes = require('./routes/messages');
+const authRoutes = require('./src/routes/auth');
+const messageRoutes = require('./src/routes/messages');
 
 const app = express();
 
