@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import styles from '../styles/groupChatModal.module.css';
 import webrtcService from '../services/webrtc';
+import { useNavigate } from 'react-router-dom';
 
 export default function GroupChatModal({ messages = [], onSendMessage, participants = [], currentUser }) {
     const [newMessage, setNewMessage] = useState('');
@@ -9,12 +10,100 @@ export default function GroupChatModal({ messages = [], onSendMessage, participa
     const [permissionError, setPermissionError] = useState('');
     const [localStream, setLocalStream] = useState(null);
     const [videoStats, setVideoStats] = useState({});
-    const [videoParticipants, setVideoParticipants] = useState([]); // {id, username, stream}
+    const [videoParticipants, setVideoParticipants] = useState([]);
+    const [isVideoEnabled, setIsVideoEnabled] = useState(true);
+    const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+    const [isScreenSharing, setIsScreenSharing] = useState(false);
+    const [localVolume, setLocalVolume] = useState(0);
     const localVideoRef = useRef(null);
     const statsIntervalRef = useRef(null);
     const socketRef = useRef(null);
     const peerConnections = useRef(new Map());
     const roomId = 'general';
+    const navigate = useNavigate();
+
+    // Request permissions when component mounts
+    useEffect(() => {
+        const requestPermissions = async () => {
+            try {
+                console.log('Requesting media permissions...');
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        facingMode: 'user'
+                    }, 
+                    audio: true 
+                });
+                console.log('Media permissions granted, stream:', stream);
+                setLocalStream(stream);
+                setPermissionsGranted(true);
+                if (localVideoRef.current) {
+                    console.log('Setting local video stream');
+                    localVideoRef.current.srcObject = stream;
+                    // Force video to play
+                    localVideoRef.current.play().catch(e => console.error('Error playing video:', e));
+                } else {
+                    console.warn('localVideoRef is not available');
+                }
+            } catch (error) {
+                console.error('Error accessing media devices:', error);
+                setPermissionError(`Please allow camera and microphone access to join the video chat. Error: ${error.message}`);
+            }
+        };
+        requestPermissions();
+    }, []);
+
+    // Add effect to handle video element
+    useEffect(() => {
+        if (localVideoRef.current && localStream) {
+            console.log('Setting up video element with stream');
+            localVideoRef.current.srcObject = localStream;
+            localVideoRef.current.play().catch(e => console.error('Error playing video:', e));
+        }
+    }, [localStream]);
+
+    // Sound meter for local audio
+    useEffect(() => {
+        if (!localStream) return;
+        let audioContext;
+        let analyser;
+        let dataArray;
+        let source;
+        let animationId;
+
+        try {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 256;
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+            source = audioContext.createMediaStreamSource(localStream);
+            source.connect(analyser);
+
+            const updateVolume = () => {
+                analyser.getByteTimeDomainData(dataArray);
+                // Calculate RMS (root mean square) volume
+                let sum = 0;
+                for (let i = 0; i < dataArray.length; i++) {
+                    const val = (dataArray[i] - 128) / 128;
+                    sum += val * val;
+                }
+                const rms = Math.sqrt(sum / dataArray.length);
+                setLocalVolume(rms);
+                animationId = requestAnimationFrame(updateVolume);
+            };
+            updateVolume();
+        } catch (e) {
+            console.error('Error setting up local sound meter:', e);
+        }
+
+        return () => {
+            if (animationId) cancelAnimationFrame(animationId);
+            if (source) source.disconnect();
+            if (analyser) analyser.disconnect();
+            if (audioContext) audioContext.close();
+        };
+    }, [localStream]);
 
     useEffect(() => {
         if (!permissionsGranted) return;
@@ -71,9 +160,6 @@ export default function GroupChatModal({ messages = [], onSendMessage, participa
             }
         });
 
-        // Initialize local stream and notify others
-        initializeLocalStream();
-
         return () => {
             socket.emit('leave_group_call', roomId);
             socket.close();
@@ -88,30 +174,7 @@ export default function GroupChatModal({ messages = [], onSendMessage, participa
                 clearInterval(statsIntervalRef.current);
             }
         };
-        // eslint-disable-next-line
     }, [permissionsGranted]);
-
-    const initializeLocalStream = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } },
-                audio: true
-            });
-            setLocalStream(stream);
-            setVideoParticipants(prev => {
-                if (prev.find(p => p.id === currentUser.id)) return prev;
-                return [{ id: currentUser.id, username: currentUser.username, stream }, ...prev];
-            });
-            // Notify others that we've joined
-            socketRef.current?.emit('group_participant_joined', {
-                userId: currentUser.id,
-                username: currentUser.username
-            });
-            startVideoStats(stream);
-        } catch (error) {
-            setPermissionError('Could not access camera/microphone.');
-        }
-    };
 
     const createPeerConnection = async (userId) => {
         try {
@@ -198,162 +261,223 @@ export default function GroupChatModal({ messages = [], onSendMessage, participa
         }
     };
 
-    const startVideoStats = (stream) => {
-        if (statsIntervalRef.current) {
-            clearInterval(statsIntervalRef.current);
-        }
-        statsIntervalRef.current = setInterval(() => {
-            const videoTrack = stream?.getVideoTracks()[0];
+    const toggleVideo = () => {
+        if (localStream) {
+            const videoTrack = localStream.getVideoTracks()[0];
             if (videoTrack) {
-                const settings = videoTrack.getSettings();
-                const stats = {
-                    width: settings.width,
-                    height: settings.height,
-                    frameRate: settings.frameRate,
-                    quality: getVideoQuality(settings.width, settings.height)
-                };
-                setVideoStats(stats);
+                videoTrack.enabled = !videoTrack.enabled;
+                setIsVideoEnabled(videoTrack.enabled);
             }
-        }, 1000);
+        }
     };
 
-    const getVideoQuality = (width, height) => {
-        if (width >= 3840 || height >= 2160) return '4K';
-        if (width >= 2560 || height >= 1440) return '1440p';
-        if (width >= 1920 || height >= 1080) return '1080p';
-        if (width >= 1280 || height >= 720) return '720p';
-        return 'SD';
+    const toggleAudio = () => {
+        if (localStream) {
+            const audioTrack = localStream.getAudioTracks()[0];
+            if (audioTrack) {
+                audioTrack.enabled = !audioTrack.enabled;
+                setIsAudioEnabled(audioTrack.enabled);
+            }
+        }
     };
 
-    const requestPermissions = async () => {
+    const toggleScreenShare = async () => {
         try {
-            // Request camera and microphone permissions together
-            await navigator.mediaDevices.getUserMedia({ 
-                video: true, 
-                audio: true 
-            });
-            setPermissionsGranted(true);
-            setPermissionError('');
+            if (!isScreenSharing) {
+                const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                const videoTrack = screenStream.getVideoTracks()[0];
+                
+                // Replace video track in all peer connections
+                peerConnections.current.forEach(pc => {
+                    const sender = pc.getSenders().find(s => s.track.kind === 'video');
+                    if (sender) {
+                        sender.replaceTrack(videoTrack);
+                    }
+                });
+
+                // Update local stream
+                const newStream = new MediaStream([
+                    ...localStream.getAudioTracks(),
+                    videoTrack
+                ]);
+                setLocalStream(newStream);
+                if (localVideoRef.current) {
+                    localVideoRef.current.srcObject = newStream;
+                }
+
+                // Handle when user stops sharing
+                videoTrack.onended = () => {
+                    toggleScreenShare();
+                };
+
+                setIsScreenSharing(true);
+            } else {
+                // Restore original video track
+                const originalStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                const videoTrack = originalStream.getVideoTracks()[0];
+
+                peerConnections.current.forEach(pc => {
+                    const sender = pc.getSenders().find(s => s.track.kind === 'video');
+                    if (sender) {
+                        sender.replaceTrack(videoTrack);
+                    }
+                });
+
+                setLocalStream(originalStream);
+                if (localVideoRef.current) {
+                    localVideoRef.current.srcObject = originalStream;
+                }
+
+                setIsScreenSharing(false);
+            }
         } catch (error) {
-            setPermissionError('Please grant camera and microphone permissions to join the group chat.');
+            console.error('Error toggling screen share:', error);
         }
     };
 
-    const handleSubmit = (e) => {
+    const handleSendMessage = (e) => {
         e.preventDefault();
-        if (newMessage.trim()) {
-            onSendMessage(newMessage);
-            setNewMessage('');
-        }
+        if (!newMessage.trim()) return;
+        onSendMessage(newMessage);
+        setNewMessage('');
     };
 
-    if (!permissionsGranted) {
-        return (
-            <div className={styles.modalOverlay}>
-                <div className={styles.permissionsModal}>
-                    <h2>Join Group Chat</h2>
-                    <p>To join the group chat, we need the following permissions:</p>
-                    <ul className={styles.permissionsList}>
-                        <li>📹 Camera access</li>
-                        <li>🎤 Microphone access</li>
-                        <li>🔔 Notifications</li>
-                    </ul>
-                    {permissionError && (
-                        <p className={styles.error}>{permissionError}</p>
-                    )}
-                    <button 
-                        onClick={requestPermissions}
-                        className={styles.permissionButton}
-                    >
-                        Grant Permissions
-                    </button>
-                </div>
-            </div>
-        );
-    }
+    // Exit handler
+    const handleExit = () => {
+        if (socketRef.current) {
+            socketRef.current.emit('leave_group_call', roomId);
+            socketRef.current.close();
+        }
+        // Optionally clean up streams
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+        }
+        navigate('/dashboard');
+    };
 
     return (
-        <div className={styles.modalOverlay}>
-            <div className={styles.modalContent}>
-                <div className={styles.header}>
-                    <div className={styles.headerLeft}>
-                        <h2>Group Chat</h2>
-                        <span className={styles.roomInfo}>General Room</span>
-                    </div>
-                    <div className={styles.participants}>
-                        <span className={styles.participantCount}>
-                            {videoParticipants.length} Online
-                        </span>
-                        <div className={styles.participantList}>
-                            {videoParticipants.map((participant) => (
-                                <div key={participant.id} className={styles.participant}>
-                                    <span className={styles.status}></span>
-                                    <span className={styles.name}>{participant.username}</span>
-                                </div>
-                            ))}
+        <div className={styles.modalContainer}>
+            <div className={styles.videoGrid}>
+                {/* Local video */}
+                <div className={styles.videoContainer} style={{ background: '#222', minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+                    {localStream ? (
+                        <video
+                            ref={localVideoRef}
+                            autoPlay
+                            playsInline
+                            muted
+                            className={styles.video}
+                            style={{ transform: 'scaleX(-1)' }}
+                        />
+                    ) : (
+                        <div style={{ color: '#888', textAlign: 'center' }}>
+                            <div>No camera feed</div>
+                            <div style={{ fontSize: 12 }}>Check camera permissions and console for errors.</div>
                         </div>
+                    )}
+                    <div className={styles.participantName}>
+                        {currentUser.username} (You)
+                    </div>
+                    {/* Sound meter bar */}
+                    <div className={styles.soundMeterBar}>
+                        <div
+                            className={styles.soundMeterLevel}
+                            style={{ width: `${Math.min(localVolume * 100, 100)}%` }}
+                        />
+                    </div>
+                    <div style={{ textAlign: 'center', color: '#aaa', fontSize: 12, marginTop: 2 }}>
+                        Mic Level
                     </div>
                 </div>
 
-                <div className={styles.videoGrid}>
-                    {videoParticipants.map((participant) => (
-                        <div key={participant.id} className={styles.videoContainer}>
-                            <video
-                                autoPlay
-                                playsInline
-                                muted={participant.id === currentUser.id}
-                                ref={video => {
-                                    if (video && participant.stream) {
-                                        video.srcObject = participant.stream;
-                                    }
-                                }}
-                                className={styles.video}
-                            />
-                            <div className={styles.videoLabel}>{participant.id === currentUser.id ? 'You' : participant.username}</div>
-                            {participant.id === currentUser.id && videoStats && (
-                                <div className={styles.videoStats}>
-                                    <span>{videoStats.quality}</span>
-                                    <span>{Math.round(videoStats.frameRate)}fps</span>
-                                </div>
-                            )}
+                {/* Remote videos */}
+                {videoParticipants.map((participant) => (
+                    <div key={participant.id} className={styles.videoContainer}>
+                        <video
+                            autoPlay
+                            playsInline
+                            ref={(video) => {
+                                if (video && participant.stream) {
+                                    video.srcObject = participant.stream;
+                                }
+                            }}
+                            className={styles.video}
+                        />
+                        <div className={styles.participantName}>
+                            {participant.username}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            <div className={styles.controls}>
+                <button
+                    onClick={toggleVideo}
+                    className={`${styles.controlButton} ${!isVideoEnabled ? styles.disabled : ''}`}
+                >
+                    {isVideoEnabled ? '📹' : '🚫'}
+                </button>
+                <button
+                    onClick={toggleAudio}
+                    className={`${styles.controlButton} ${!isAudioEnabled ? styles.disabled : ''}`}
+                >
+                    {isAudioEnabled ? '🎤' : '🔇'}
+                </button>
+                <button
+                    onClick={toggleScreenShare}
+                    className={`${styles.controlButton} ${isScreenSharing ? styles.active : ''}`}
+                >
+                    {isScreenSharing ? '🖥️' : '📺'}
+                </button>
+                {/* Mute button (toggles audio) */}
+                <button
+                    onClick={toggleAudio}
+                    className={`${styles.controlButton} ${!isAudioEnabled ? styles.disabled : ''}`}
+                    title={isAudioEnabled ? 'Mute Myself' : 'Unmute Myself'}
+                >
+                    {isAudioEnabled ? '🔇 Mute' : '🎤 Unmute'}
+                </button>
+                {/* Exit button */}
+                <button
+                    onClick={handleExit}
+                    className={styles.controlButton}
+                    style={{ background: '#ff4444', color: 'white' }}
+                    title="Exit Group Chat"
+                >
+                    🚪 Exit
+                </button>
+            </div>
+
+            <div className={styles.chatContainer}>
+                <div className={styles.messages}>
+                    {messages.map((message, index) => (
+                        <div
+                            key={index}
+                            className={`${styles.message} ${
+                                message.sender === currentUser.id ? styles.sent : styles.received
+                            }`}
+                        >
+                            <div className={styles.messageSender}>{message.senderName}</div>
+                            <div className={styles.messageContent}>{message.content}</div>
                         </div>
                     ))}
                 </div>
-                
-                <div className={styles.chatArea}>
-                    <div className={styles.messages}>
-                        {Array.isArray(messages) && messages.map((message, index) => (
-                            <div
-                                key={index}
-                                className={`${styles.message} ${
-                                    message.sender === currentUser?.id ? styles.sent : styles.received
-                                }`}
-                            >
-                                {message.sender !== currentUser?.id && (
-                                    <div className={styles.messageSender}>{message.senderName}</div>
-                                )}
-                                <div className={styles.messageContent}>{message.content}</div>
-                                <div className={styles.messageTime}>
-                                    {new Date(message.timestamp).toLocaleTimeString()}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <form onSubmit={handleSubmit} className={styles.inputArea}>
+                <form onSubmit={handleSendMessage} className={styles.messageInput}>
                     <input
                         type="text"
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         placeholder="Type a message..."
-                        className={styles.messageInput}
                     />
-                    <button type="submit" className={styles.sendButton}>
-                        Send
-                    </button>
+                    <button type="submit">Send</button>
                 </form>
             </div>
+
+            {permissionError && (
+                <div className={styles.permissionError}>
+                    {permissionError}
+                </div>
+            )}
         </div>
     );
 } 
