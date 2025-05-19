@@ -15,6 +15,7 @@ export default function Sidebar({ onSelectUser, selectedUser }) {
 
   const fetchUsers = async () => {
     try {
+      console.log(import.meta.env.VITE_API_URL);
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
