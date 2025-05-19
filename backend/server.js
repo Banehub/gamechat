@@ -5,6 +5,8 @@ const groupParticipants = new Map();
 // Store group chat participants
 const groupChatParticipants = new Map();
 
+
+
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
   
